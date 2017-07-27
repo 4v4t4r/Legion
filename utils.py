@@ -17,6 +17,8 @@ import struct
 import subprocess
 import sys
 import time
+import ssl
+import urllib.request as req
 
 class Utils():
     @staticmethod
@@ -77,6 +79,7 @@ class Utils():
             if not os.path.exists(os.path.dirname(fullfilename)):
                 os.makedirs(os.path.dirname(fullfilename))
             fp = open(fullfilename, flag)
+            print (type(text))
             fp.write(str.encode(text))
             fp.close()
 
@@ -137,8 +140,20 @@ class Utils():
             else:
                 tmp_result = "\033[0;33m(" + time.strftime(
                     "%Y.%m.%d-%H.%M.%S") + ") <pentest> #\033[0m " + cmd + Utils.newLine() + Utils.newLine() + result
-                Utils.writeFile(tmp_result, outfile)
+                Utils.writeFile(tmp_result, outfile, 'ab')
         return result
+
+    @staticmethod
+    def wget(url, outpath="tmp"):
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
+        fname = outpath + os.sep + "download_" + Utils.getRandStr(5)
+        data = ''
+        with req.urlopen(url, context=ctx) as d:
+            data += d.read().decode()
+        Utils.writeFile(data, fname, 'ab')
 
 class Colors(object):
     N = '\033[m'  # native
@@ -146,7 +161,6 @@ class Colors(object):
     G = '\033[32m'  # green
     O = '\033[33m'  # orange
     B = '\033[34m'  # blue
-
 
 class ProgressBar():
     def __init__(self, end=100, width=10, title="", display=None):
